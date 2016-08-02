@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -35,31 +34,43 @@ func isProject(dir string) bool {
 }
 
 func processDir(parent, root string) error {
+	fmt.Printf("processing directory %v\n", parent)
 	subDires, err := ioutil.ReadDir(parent)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
 	for _, dir := range subDires {
-		fmt.Println(dir.Name())
 		name := dir.Name()
 		cate := category(name)
 		if cate == "" {
-			return errors.New("name doesn't start with alphabeta")
+			fmt.Printf("name doesn't start with alphabeta : %v\n", name)
+			continue
 		} else if cate == name {
-			return nil
+			fmt.Printf("skip directory %v\n", name)
+			continue
 		} else if isProject(filepath.Join(parent, dir.Name())) {
 			target := filepath.Join(root, cate)
 			_, err := os.Stat(target)
 			if err != nil && os.IsNotExist(err) {
-				err := os.Mkdir(target, 664)
+				err := os.Mkdir(target, 0755)
 				if err != nil {
 					return err
 				}
 			}
-			return os.Rename(filepath.Join(parent, dir.Name()), filepath.Join(target, dir.Name()))
+
+			from := filepath.Join(parent, dir.Name())
+			to := filepath.Join(target, dir.Name())
+
+			fmt.Printf("moving %v to %v \n", from, to)
+			err = os.Rename(from, to)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			continue
 		}
 
-		return processDir(filepath.Join(parent, dir.Name()), root)
+		processDir(filepath.Join(parent, dir.Name()), root)
 	}
 
 	return nil
